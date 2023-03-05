@@ -1,0 +1,546 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:example/core.dart';
+import 'package:example/module/zakat/list_zakat_fitrah/model/zakat_fitrah_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+
+class ListZakatFitrahController extends State<ListZakatFitrahView>
+    implements MvcController {
+  static late ListZakatFitrahController instance;
+  late ListZakatFitrahView view;
+
+  List nominal = [];
+
+  //double sum = 0;
+  double total = 0;
+  final String userid = FirebaseAuth.instance.currentUser!.uid;
+
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  List<ZakatFitrahModel> allZakatFitrah = [];
+
+  @override
+  void initState() {
+    instance = this;
+
+    //totalzaper();
+
+    //queryValues();
+
+    // FirebaseFirestore.instance.collection('zakat_fitrah').get().then(
+    //   (querySnapshot) {
+    //     for (var result in querySnapshot.docs) {
+    //       sum = sum + result.data()['nominal'];
+    //     }
+    //     setState(() {
+    //       total = sum;
+    //     });
+
+    //     print(total.toString());
+
+    //     return total;
+    //   },
+    // );
+    super.initState();
+  }
+
+  @override
+  void dispose() => super.dispose();
+
+  void reportFitrah() async {
+    final pdf = pw.Document();
+    int hitung = 0;
+
+    var getData = await firestore.collection("zakat_fitrah").get();
+
+    //reset semua data, utk mencegah duplikat
+    allZakatFitrah;
+
+    //perulangan utk menampilkan semua data
+    for (var element in getData.docs) {
+      allZakatFitrah.add(ZakatFitrahModel.fromJson(element.data()));
+    }
+
+    // final docshitung = getData.docs;
+
+    // for (var elementhitung in docshitung) {
+    //   final int totalnominal = elementhitung.data()['nominal'];
+    //   hitung += totalnominal;
+    // }
+
+    // print(hitung);
+
+    //return hitung;
+
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      build: (context) {
+        List<pw.TableRow> allData =
+            List.generate(allZakatFitrah.length, (index) {
+          ZakatFitrahModel zakatfitrah = allZakatFitrah[index];
+
+          return pw.TableRow(children: [
+            //utk urutan nomor
+            pw.Padding(
+                padding: const pw.EdgeInsets.all(20),
+                child: pw.Text(" ${index + 1}",
+                    textAlign: pw.TextAlign.center,
+                    style: const pw.TextStyle(fontSize: 12))),
+
+            //nama muzakki
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(20),
+              child: pw.Text(zakatfitrah.nama,
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 15)),
+            ),
+
+            //nominal
+            pw.Padding(
+                padding: const pw.EdgeInsets.all(20),
+                child: pw.Text("${zakatfitrah.nominal}",
+                    textAlign: pw.TextAlign.center,
+                    style: const pw.TextStyle(fontSize: 12))),
+
+            //metode
+            pw.Padding(
+                padding: const pw.EdgeInsets.all(20),
+                child: pw.Text(zakatfitrah.metode,
+                    textAlign: pw.TextAlign.center,
+                    style: const pw.TextStyle(fontSize: 12)))
+          ]);
+        });
+
+        //disini utk bikin tampilan reportnya
+        return [
+          pw.Center(
+              child: pw.Text("Report Zakat Fitrah",
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 23))),
+          pw.SizedBox(height: 22),
+          pw.Table(
+              border: pw.TableBorder.all(
+                  color: PdfColor.fromHex("#000000"), width: 3),
+              children: [
+                pw.TableRow(children: [
+                  //utk nomor
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("No:",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  //Nama Muzakki
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Nama",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  //Nominal
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Nominal",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  //Metode
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Metode",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  //panggilnya g bisa langsung getnominal tostring
+                  // pw.Padding(
+                  //     padding: const pw.EdgeInsets.all(20),
+                  //     child: pw.Text("$hitung",
+                  //         textAlign: pw.TextAlign.center,
+                  //         style: pw.TextStyle(
+                  //             fontSize: 12, fontWeight: pw.FontWeight.bold))),
+                ]),
+                ...allData,
+              ]),
+        ];
+      },
+    ));
+
+    //simpan
+    Uint8List bytes = await pdf.save();
+
+    //buat file kosong di direktooori
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/fitrahsemua.pdf');
+
+    await file.writeAsBytes(bytes);
+
+    //open pdf
+    await OpenFile.open(file.path);
+  }
+
+  void reportFitrahId(String no) async {
+    print(no);
+    final pdf = pw.Document();
+
+    allZakatFitrah;
+
+    // no itu sama aja dengan uid,  where ambil berdasarkan uid
+    var getData = await firestore.collection("zakat_fitrah").doc(no).get();
+    print(getData);
+
+    Map<String, dynamic>? data = getData.data();
+
+    print(data);
+    print(data!['nama']);
+
+    // // var element = data.length;
+
+    // var getElement = await firestore
+    //     .collection("zakat_fitrah")
+    //     .where("uid", isEqualTo: uid)
+    //     .get();
+
+    // //perulangan utk menampilkan semua data
+    // for (var element in getData.data().) {
+    //   allZakatFitrah.add(ZakatFitrahModel.fromJson(element.data()));
+    // }
+
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      build: (pw.Context context) {
+        //disini utk bikin tampilan reportnya
+        return [
+          pw.Center(
+              child: pw.Text("Report Zakat Fitrah",
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 23))),
+          pw.SizedBox(height: 22),
+          pw.Table(
+              border: pw.TableBorder.all(
+                  color: PdfColor.fromHex("#000000"), width: 1),
+              children: [
+                pw.TableRow(children: [
+                  //utk nomor
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("No:",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  //Nama Muzakki
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Nama",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  //Nominal
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Nominal",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  //Metode
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Metode",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+                ]),
+                pw.TableRow(children: [
+                  //Metode
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("1.",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("${data['nama']}",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Rp. ${data['nominal']}",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("${data['metode']}",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+                ])
+              ]),
+        ];
+      },
+    ));
+
+    //simpan
+    Uint8List bytes = await pdf.save();
+
+    //buat file kosong di direktooori
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/${data['nama']}.pdf'); //file sesuai nama
+
+    await file.writeAsBytes(bytes);
+
+    //open pdf
+    await OpenFile.open(file.path);
+  }
+
+  void reportFitrahSatuan(String no) async {
+    print(no);
+    final pdf = pw.Document();
+
+    allZakatFitrah;
+
+    // no itu sama aja dengan uid,  where ambil berdasarkan uid
+    var getData = await firestore.collection("zakat_fitrah").doc(no).get();
+    print(getData);
+
+    Map<String, dynamic>? data = getData.data();
+
+    print(data);
+    print(data!['nama']);
+
+    // // var element = data.length;
+
+    // var getElement = await firestore
+    //     .collection("zakat_fitrah")
+    //     .where("uid", isEqualTo: uid)
+    //     .get();
+
+    // //perulangan utk menampilkan semua data
+    // for (var element in getData.data().) {
+    //   allZakatFitrah.add(ZakatFitrahModel.fromJson(element.data()));
+    // }
+
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      build: (pw.Context context) {
+        //disini utk bikin tampilan reportnya
+        return [
+          pw.Center(
+              child: pw.Text("Bukti Zakat Fitrah\n DKM Al Ridwan",
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 23))),
+          pw.SizedBox(height: 22),
+          pw.Table(
+              //enggak usah pakai garis
+              // border: pw.TableBorder.all(
+              //     color: PdfColor.fromHex("#000000"), width: 0),
+              children: [
+                pw.TableRow(children: [
+                  //utk nomor
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Nama:",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 20, fontWeight: pw.FontWeight.bold))),
+
+                  //Nama Muzakki
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("${data['nama']}",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                            fontSize: 20,
+                            fontWeight: pw.FontWeight.bold,
+                          ))),
+                ]),
+                pw.TableRow(children: [
+                  //Metode
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Nominal",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 20, fontWeight: pw.FontWeight.bold))),
+
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("${data['nominal']}",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+                ]),
+                pw.TableRow(children: [
+                  //Metode
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("Metode",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold))),
+
+                  pw.Padding(
+                      padding: const pw.EdgeInsets.all(20),
+                      child: pw.Text("${data['metode']}",
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                              fontSize: 20, fontWeight: pw.FontWeight.bold))),
+                ])
+              ]),
+          pw.SizedBox(height: 20),
+          pw.Text("Jazakallah Khairan Katsiiraan Atas Zakat Anda",
+              style: pw.TextStyle(fontSize: 25, fontWeight: pw.FontWeight.bold))
+        ];
+      },
+    ));
+
+    //simpan
+    Uint8List bytes = await pdf.save();
+
+    //buat file kosong di direktooori
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/${data['nama']}.pdf'); //file sesuai nama
+
+    await file.writeAsBytes(bytes);
+
+    //open pdf
+    await OpenFile.open(file.path);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.build(context, this);
+
+  // static Future<num> nomzaper() async {
+  //   num sum = 0;
+  //   await FirebaseFirestore.instance
+  //       .collection('zakat_fitrah')
+  //       .where('nominal', isNotEqualTo: 0)
+  //       .get()
+  //       .then((querySnapshot) {
+  //     for (var result in querySnapshot.docs) {
+  //       sum += result.data()['nominal'];
+  //     }
+  //   });
+
+  //   print(sum);
+  //   return sum;
+  // }
+
+  //query mendapatkan jumlah total nominal,
+  // di viewnya harus pakai future builder
+  Future<int> getNominal() async {
+    int sum = 0;
+
+    final zakatfitrahCollection =
+        await FirebaseFirestore.instance.collection("zakat_fitrah").get();
+
+    // final docs = zakatfitrahCollection.docs.where((element) => element
+    //     .data()['created_at']
+    //     .toString()
+    //     .contains(DateFormat('yyyy-MM-dd').format(DateTime.now())));
+
+    final docs = zakatfitrahCollection.docs;
+
+    for (var element in docs) {
+      final int totalnominal = element.data()['nominal'];
+      sum += totalnominal;
+    }
+
+    print(sum);
+
+    return sum;
+  }
+
+  queryValues() async {
+    double tempTotal = 0;
+    String sumtotal;
+    User? user = FirebaseAuth.instance.currentUser;
+    FirebaseFirestore.instance
+        .collection('zakat_fitrah')
+        //.where("uid", isEqualTo: user!.uid)
+        .where("nominal", isNull: false)
+        //.where("payment", isEqualTo: false)
+        .snapshots()
+        .listen((snapshot) {
+      tempTotal = snapshot.docs.fold(0, (tot, doc) => tot + doc['nominal']);
+      sumtotal = tempTotal.toString();
+
+      print(sumtotal);
+    });
+  }
+
+  // totalzaper() async {
+  //   String angka = "";
+  //   num sum = 0;
+  //   await FirebaseFirestore.instance
+  //       .collection('zakat_fitrah')
+  //       .where('nominal', isNotEqualTo: 0)
+  //       .get()
+  //       .then((querySnapshot) {
+  //     for (var result in querySnapshot.docs) {
+  //       sum += result.data()['nominal'];
+  //     }
+  //   });
+
+  //   //setState(() {});
+
+  //   print(sum);
+  //   return sum;
+  // }
+
+  // Future totalnominal() async {
+  //   double totnominal = 0.0;
+
+  //   var data = await FirebaseFirestore.instance
+  //       .collection("zakat_fitrah")
+  //       .get()
+  //       .then((querysnapshot) {
+  //     for (var element in querysnapshot.docs) {
+  //       double value = element.data()["nominal"];
+
+  //       totnominal = totnominal + value;
+  //     }
+  //   });
+
+  //   print(totnominal);
+
+  //   return totnominal.toString();
+  // }
+
+  // int get total_price {
+  //   //mendeklaraskian variabel awal total barang yang dibeli
+  //   var rowsTotal = 0;
+  //   for (var i = 0; i < nominal.length; i++) {
+  //     var item = nominal[i]; // menampug jumlah produk yang dibeli
+
+  //     //double rowTotal = item['qty'] * item['price']; //totharga tipenya double
+
+  //     //harus diparsing dari double ke string dulu
+  //     int rowTotal = int.parse(item['qty'].toString()) *
+  //         int.parse(item['price'].toString());
+
+  //     //menammbahkan prooduk yang dibeli sekaligus dikalkulasikan
+  //     rowsTotal += rowTotal;
+  //   }
+
+  //   return rowsTotal;
+  // }
+}

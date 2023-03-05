@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "357483403899",
+    "project_id": "zakatapp-49476",
+    "storage_bucket": "zakatapp-49476.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:357483403899:android:2622208f1c89c84dfda0de",
+        "android_client_info": {
+          "package_name": "com.example.capek_ngoding_web"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "357483403899-mfa72tl8eckbgsuol3pbeb5lv37r9fpj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqggP_Uy3SD-ntTW_m-5oXPEgMMclCTKM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "357483403899-mfa72tl8eckbgsuol3pbeb5lv37r9fpj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,30 @@
+{
+    "openai_key": "",
+    "modules": [
+        "main",
+        "pos/pos_login",
+        "pos/pos_dashboard",
+        "pos/pos_main_navigation",
+        "pos/pos_order_list",
+        "pos/pos_profile",
+        "pos/pos",
+        "pos/pos_product_list",
+        "pos/pos_product_form",
+        "pos/pos_table",
+        "pos/pos_checkout",
+        "welcomes/first_screen",
+        "welcomes/second_screen",
+        "zakat/zakat_login",
+        "zakat/zakat_dashboard",
+        "zakat/zakat_fitrah",
+        "zakat/zakat_maal",
+        "zakat/zakat_profesi",
+        "zakat/zakat_perniagaan",
+        "zakat/zakat_emas",
+        "zakat/zakat_navbar_dashboard",
+        "zakat/list_zakat_fitrah",
+        "zakat/list_zakat_emas",
+        "zakat/list_zakat_profesi",
+        "zakat/list_zakat_perniagaan"
+    ]
+}
